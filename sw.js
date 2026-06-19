@@ -5,7 +5,7 @@
    - Código (shell)   -> cache-first versionado (subí VERSION al cambiar código)
    ============================================================ */
 
-const VERSION = "v2";               // 👈 SUBÍ ESTO cuando cambies HTML/CSS/app.js
+const VERSION = "v3";               // 👈 SUBÍ ESTO cuando cambies HTML/CSS/app.js
 const SHELL_CACHE   = "shell-" + VERSION;
 const RUNTIME_CACHE = "runtime";    // datos + imágenes (persiste entre versiones)
 

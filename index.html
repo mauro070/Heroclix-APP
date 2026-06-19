@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Heroclix Builder</title>
+  <meta name="theme-color" content="#0d1b2a">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+  <!-- ===== HUD superior: medidor de build ===== -->
+  <header class="hud">
+    <button class="hud__btn" id="toggle-btn" aria-label="Equipos guardados"><i class="fas fa-bars"></i></button>
+
+    <div class="meter" id="meter" title="Puntos del equipo">
+      <div class="meter__fill" id="meter-fill"></div>
+      <div class="meter__text"><span id="total">0</span><span class="meter__limit"> / 300</span></div>
+    </div>
+
+    <div class="hud__units"><i class="fas fa-users"></i><span id="unidades">0</span></div>
+
+    <button class="hud__btn" id="show-equipo" aria-label="Ver solo mi equipo"><i class="fas fa-star"></i></button>
+    <button class="hud__btn hud__btn--danger" id="Reset" aria-label="Vaciar equipo"><i class="fas fa-trash-alt"></i></button>
+  </header>
+
+  <!-- ===== Buscador ===== -->
+  <div class="search">
+    <select class="search__mode" id="lista" aria-label="Buscar por">
+      <option value="nombre">Nombre</option>
+      <option value="keyword">Keyword</option>
+    </select>
+    <div class="search__field">
+      <i class="fas fa-search search__icon"></i>
+      <input id="searchbar" type="text" placeholder="Buscar figura..." autocomplete="off">
+      <button class="search__clear" id="clear" aria-label="Limpiar"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+
+  <!-- ===== Lista de figuras (render por JS) ===== -->
+  <main class="roster">
+    <ol class="unit-list" id="heroclix-list"></ol>
+    <p class="empty" id="empty" hidden>No hay figuras que coincidan.</p>
+  </main>
+
+  <!-- ===== Modal imagen ===== -->
+  <div id="myModal" class="modal">
+    <button class="modal__close" id="modal-close" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+    <img class="modal__img" id="img01" alt="">
+    <div class="modal__caption" id="caption"></div>
+  </div>
+
+  <!-- ===== Sidebar: equipos guardados ===== -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar__head">
+      <img src="icons/icon-192.png" alt="" class="sidebar__logo">
+      <h2 class="sidebar__title">Mis equipos</h2>
+      <button class="sidebar__close" id="sidebar-close" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="saver">
+      <input id="team-name" type="text" placeholder="Nombre del equipo" maxlength="40">
+      <button id="save-team" class="btn btn--primary"><i class="fas fa-save"></i> Guardar equipo actual</button>
+    </div>
+
+    <ul class="saved" id="saved-teams"></ul>
+    <p class="saved__empty" id="saved-empty">Todavía no guardaste ningún equipo.</p>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -372,3 +372,43 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ===================== Fondo animado: diales girando ===================== */
+.bg-fx {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg-fx::before,
+.bg-fx::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border-style: dashed;
+  will-change: transform;
+}
+/* dial grande arriba-derecha (ámbar) */
+.bg-fx::before {
+  top: -160px; right: -160px;
+  width: 460px; height: 460px;
+  border-width: 14px;
+  border-color: rgba(244,167,46,.06);
+  box-shadow: inset 0 0 0 26px rgba(255,255,255,.025);
+  animation: spin 90s linear infinite;
+}
+/* dial grande abajo-izquierda (azul), gira al revés */
+.bg-fx::after {
+  bottom: -200px; left: -180px;
+  width: 560px; height: 560px;
+  border-width: 18px;
+  border-color: rgba(53,138,221,.07);
+  box-shadow: inset 0 0 0 30px rgba(255,255,255,.02);
+  animation: spin 130s linear infinite reverse;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-fx::before, .bg-fx::after { animation: none; }
+}

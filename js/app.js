@@ -201,6 +201,8 @@ function closeSidebar() { $("sidebar").classList.remove("is-open"); $("scrim").h
 
 /* ============================ Init ============================ */
 document.addEventListener("DOMContentLoaded", () => {
+  // Orden alfabético por nombre (no importa el orden en data.js)
+  FIGURES.sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
   renderFigures();
   loadCurrent();
   renderSaved();

@@ -1,6 +1,7 @@
 // Datos de las figuras. Para agregar una nueva, copiá un objeto y editalo.
 // points: de menor a mayor. keywords: tal cual querés buscarlas.
 const FIGURES = [
+  {"name": "PRUEBA 2", "img": "Images/Minis/dofp005.jpg", "alt": "Angel dofp005", "keywords": ["Celebrity", "Champions", "Defenders", "X-Factor", "X-Men"], "points": [74]},
   {"name": "PRUEBA", "img": "Images/Minis/dofp005.jpg", "alt": "Angel dofp005", "keywords": ["Celebrity", "Champions", "Defenders", "X-Factor", "X-Men"], "points": [74]},
   {"name": "Angel", "img": "Images/Minis/dofp005.jpg", "alt": "Angel dofp005", "keywords": ["Celebrity", "Champions", "Defenders", "X-Factor", "X-Men"], "points": [74]},
   {"name": "Apocalypse", "img": "Images/Minis/xmrf062.jpg", "alt": "Apocalypse xmrf062", "keywords": ["Horsemen", "X-Men", "Armor", "Future", "Past", "Ruler"], "points": [75, 125]},

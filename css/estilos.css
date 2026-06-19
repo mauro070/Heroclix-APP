@@ -159,7 +159,7 @@ body {
 .unit {
   display: flex;
   align-items: stretch;
-  background: rgba(248, 250, 252, 0.85);   /* antes: var(--surface) */
+  background: rgba(248, 250, 252, 0.30);   /* antes: var(--surface) */
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   border-radius: var(--radius);

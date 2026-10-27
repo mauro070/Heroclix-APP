@@ -414,3 +414,59 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bg-fx::before, .bg-fx::after { animation: none; }
 }
+
+/* ============================ Homelab Sync ============================ */
+.sync-box {
+  margin: 4px 16px 12px 16px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sync-box__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.sync-box__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: inline-block;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.sync-box__dot.is-online {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(42, 157, 143, 0.6);
+}
+.sync-box__dot.is-offline {
+  background: var(--red);
+}
+.btn--secondary {
+  background: #ffffff;
+  color: var(--navy);
+  border: 1px solid var(--line);
+}
+.btn--secondary:hover {
+  background: var(--surface-2);
+}
+.btn--sm {
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  border-radius: 8px;
+}
+.btn.is-loading i {
+  animation: spin 1s infinite linear;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

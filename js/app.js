@@ -109,6 +109,76 @@ function loadCurrent() {
   catch (e) {}
 }
 
+/* ============================ Homelab Sync ============================ */
+const HOMELAB_API = "https://mauro.taild9dcef.ts.net:8444/api/heroclix";
+let isSyncing = false;
+
+async function checkHomelabStatus() {
+  const dot = $("sync-dot");
+  const text = $("sync-text");
+  if (!dot || !text) return false;
+  try {
+    const res = await fetch("https://mauro.taild9dcef.ts.net:8444/api/health", { mode: "cors", signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      dot.className = "sync-box__dot is-online";
+      text.textContent = "Homelab conectado";
+      return true;
+    }
+  } catch (_) {}
+  dot.className = "sync-box__dot is-offline";
+  text.textContent = "Homelab desconectado";
+  return false;
+}
+
+async function syncWithHomelab(isManual = false) {
+  if (isSyncing) return;
+  isSyncing = true;
+  const btn = $("sync-btn");
+  if (btn) btn.classList.add("is-loading");
+
+  try {
+    const localTeams = getSaved();
+    const res = await fetch(HOMELAB_API, { mode: "cors", signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const remoteData = await res.json();
+    const remoteTeams = Array.isArray(remoteData.teams) ? remoteData.teams : [];
+
+    // Combinar por ID o nombre respetando fecha más reciente
+    const map = new Map();
+    remoteTeams.forEach(t => map.set(t.id || t.name, t));
+    localTeams.forEach(t => {
+      const key = t.id || t.name;
+      const remote = map.get(key);
+      if (!remote || (t.date && t.date >= (remote.date || 0))) {
+        map.set(key, t);
+      }
+    });
+
+    const merged = Array.from(map.values());
+    try { localStorage.setItem(KEY_SAVED, JSON.stringify(merged)); } catch (e) {}
+    renderSaved();
+
+    // Enviar lista combinada al Homelab
+    await fetch(HOMELAB_API, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teams: merged, current: currentKeys() }),
+      signal: AbortSignal.timeout(4000)
+    });
+
+    checkHomelabStatus();
+    if (isManual) toast("Sincronizado con Homelab");
+  } catch (err) {
+    console.warn("Homelab sync:", err);
+    checkHomelabStatus();
+    if (isManual) toast("No se pudo conectar al Homelab (revisá Tailscale)");
+  } finally {
+    isSyncing = false;
+    if (btn) btn.classList.remove("is-loading");
+  }
+}
+
 /* ============================ Equipos guardados ============================ */
 function getSaved() {
   try { return JSON.parse(localStorage.getItem(KEY_SAVED) || "[]"); }
@@ -117,6 +187,7 @@ function getSaved() {
 function setSaved(arr) {
   try { localStorage.setItem(KEY_SAVED, JSON.stringify(arr)); } catch (e) {}
   renderSaved();
+  syncWithHomelab(false);
 }
 function saveNamedTeam() {
   const input = $("team-name");
@@ -257,6 +328,13 @@ document.addEventListener("DOMContentLoaded", () => {
   modal.addEventListener("click", e => { if (e.target === modal) hideImage(); });
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") { hideImage(); closeSidebar(); }
+  });
+
+  // Homelab Sync
+  const syncBtn = $("sync-btn");
+  if (syncBtn) syncBtn.addEventListener("click", () => syncWithHomelab(true));
+  checkHomelabStatus().then(online => {
+    if (online) syncWithHomelab(false);
   });
 
   // Persistencia: pedir a Chrome que no borre los datos

@@ -94,8 +94,17 @@ function currentKeys() {
   return [...listEl.querySelectorAll(".caja:checked")]
     .map(cb => figKey(FIGURES[cb.dataset.fig], cb.value));
 }
+let draftSyncTimeout = null;
+function notifyDraftChanged() {
+  clearTimeout(draftSyncTimeout);
+  draftSyncTimeout = setTimeout(() => {
+    syncWithHomelab(false);
+  }, 1500);
+}
+
 function saveCurrent() {
   try { localStorage.setItem(KEY_CURRENT, JSON.stringify(currentKeys())); } catch (e) {}
+  notifyDraftChanged();
 }
 function applyKeys(keys) {
   const set = new Set(keys);
@@ -157,6 +166,12 @@ async function syncWithHomelab(isManual = false) {
     const merged = Array.from(map.values());
     try { localStorage.setItem(KEY_SAVED, JSON.stringify(merged)); } catch (e) {}
     renderSaved();
+
+    // Si el equipo actual en pantalla está vacío y el servidor tiene uno guardado, recuperarlo
+    if ((!currentKeys().length) && Array.isArray(remoteData.current) && remoteData.current.length) {
+      applyKeys(remoteData.current);
+      try { localStorage.setItem(KEY_CURRENT, JSON.stringify(remoteData.current)); } catch (e) {}
+    }
 
     // Enviar lista combinada al Homelab
     await fetch(HOMELAB_API, {

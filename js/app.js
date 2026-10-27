@@ -4,6 +4,7 @@
 const LIMITE = 300;                       // formato estándar de build
 const KEY_CURRENT = "heroclix-equipo";    // equipo en edición
 const KEY_SAVED   = "heroclix-equipos";   // equipos guardados (nombrados)
+const KEY_CUSTOM  = "heroclix-custom-figures"; // miniaturas agregadas por el usuario
 
 /* ============================ Refs ============================ */
 const listEl     = document.getElementById("heroclix-list");
@@ -22,7 +23,29 @@ function escapeHtml(s) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 // Clave estable de un nivel: incluye alt (código único tipo "dofp005") para evitar colisiones
-function figKey(fig, value) { return fig.alt + "|" + value; }
+function figKey(fig, value) { return (fig ? fig.alt : "") + "|" + value; }
+
+/* Miniaturas personalizadas */
+function getCustomFigures() {
+  try { return JSON.parse(localStorage.getItem(KEY_CUSTOM) || "[]"); }
+  catch (e) { return []; }
+}
+function setCustomFigures(arr) {
+  try { localStorage.setItem(KEY_CUSTOM, JSON.stringify(arr)); } catch (e) {}
+}
+
+function getDefaultMiniSvg(name) {
+  const initial = (name || "?").charAt(0).toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1b2a3d" rx="14"/><circle cx="50" cy="50" r="32" fill="#243b55" stroke="#f4a72e" stroke-width="2.5"/><text x="50" y="59" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#f4a72e" text-anchor="middle">${initial}</text></svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+
+let ALL_FIGURES = [];
+function refreshAllFigures() {
+  const custom = getCustomFigures();
+  ALL_FIGURES = [...FIGURES, ...custom];
+  ALL_FIGURES.sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+}
 
 let toastTimer;
 function toast(msg) {
@@ -36,7 +59,8 @@ function toast(msg) {
 
 /* ============================ Render ============================ */
 function renderFigures() {
-  listEl.innerHTML = FIGURES.map((fig, idx) => {
+  refreshAllFigures();
+  listEl.innerHTML = ALL_FIGURES.map((fig, idx) => {
     const tags = fig.keywords.map(kw =>
       `<a href="#" class="tag" data-kw="${escapeHtml(kw)}">${escapeHtml(kw)}</a>`).join("");
     const dials = fig.points.map(p => `
@@ -44,14 +68,15 @@ function renderFigures() {
           <input type="checkbox" class="caja" value="${p}" data-fig="${idx}">
           <span class="dial__pts">${p}</span>
         </label>`).join("");
+    const customBadge = fig.isCustom ? `<span class="unit__custom-badge" title="Miniatura personalizada">Custom</span>` : "";
     return `
-      <li class="unit" data-name="${escapeHtml(fig.name.toLowerCase())}"
+      <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-name="${escapeHtml(fig.name.toLowerCase())}"
           data-keywords="${escapeHtml(fig.keywords.join("|").toLowerCase())}">
         <div class="unit__media">
           <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt)}" loading="lazy" data-zoom>
         </div>
         <div class="unit__body">
-          <h3 class="unit__name">${escapeHtml(fig.name)}</h3>
+          <h3 class="unit__name">${escapeHtml(fig.name)}${customBadge}</h3>
           <div class="unit__tags">${tags}</div>
         </div>
         <div class="unit__dials">${dials}</div>
@@ -92,7 +117,11 @@ function recalc() {
 /* ============================ Equipo actual (autosave) ============================ */
 function currentKeys() {
   return [...listEl.querySelectorAll(".caja:checked")]
-    .map(cb => figKey(FIGURES[cb.dataset.fig], cb.value));
+    .map(cb => {
+      const fig = ALL_FIGURES[cb.dataset.fig];
+      return fig ? figKey(fig, cb.value) : null;
+    })
+    .filter(Boolean);
 }
 let draftSyncTimeout = null;
 function notifyDraftChanged() {
@@ -109,7 +138,8 @@ function saveCurrent() {
 function applyKeys(keys) {
   const set = new Set(keys);
   listEl.querySelectorAll(".caja").forEach(cb => {
-    cb.checked = set.has(figKey(FIGURES[cb.dataset.fig], cb.value));
+    const fig = ALL_FIGURES[cb.dataset.fig];
+    cb.checked = fig ? set.has(figKey(fig, cb.value)) : false;
   });
   recalc();
 }
@@ -167,6 +197,26 @@ async function syncWithHomelab(isManual = false) {
     try { localStorage.setItem(KEY_SAVED, JSON.stringify(merged)); } catch (e) {}
     renderSaved();
 
+    // Sincronizar figuras personalizadas
+    const localCustom = getCustomFigures();
+    const remoteCustom = Array.isArray(remoteData.custom_figures) ? remoteData.custom_figures : [];
+    const customMap = new Map();
+    remoteCustom.forEach(f => customMap.set(f.alt || f.id || f.name, f));
+    localCustom.forEach(f => {
+      const k = f.alt || f.id || f.name;
+      const remote = customMap.get(k);
+      if (!remote || (f.updatedAt && f.updatedAt >= (remote.updatedAt || 0))) {
+        customMap.set(k, f);
+      }
+    });
+    const mergedCustom = Array.from(customMap.values());
+    const hadCustomChange = JSON.stringify(mergedCustom) !== JSON.stringify(localCustom);
+    setCustomFigures(mergedCustom);
+    if (hadCustomChange) {
+      renderFigures();
+      applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
+    }
+
     // Si el equipo actual en pantalla está vacío y el servidor tiene uno guardado, recuperarlo
     if ((!currentKeys().length) && Array.isArray(remoteData.current) && remoteData.current.length) {
       applyKeys(remoteData.current);
@@ -178,7 +228,11 @@ async function syncWithHomelab(isManual = false) {
       method: "POST",
       mode: "cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teams: merged, current: currentKeys() }),
+      body: JSON.stringify({
+        teams: merged,
+        current: currentKeys(),
+        custom_figures: mergedCustom
+      }),
       signal: AbortSignal.timeout(4000)
     });
 
@@ -285,6 +339,90 @@ function resetAll() {
 function openSidebar()  { $("sidebar").classList.add("is-open");  $("scrim").hidden = false; }
 function closeSidebar() { $("sidebar").classList.remove("is-open"); $("scrim").hidden = true; }
 
+/* ============================ Modal Nueva Figura ============================ */
+let selectedPhotoDataUrl = null;
+
+function resizeImage(file, maxDim = 400) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function openAddModal() {
+  $("addModal").hidden = false;
+  $("fig-name").focus();
+  renderCustomList();
+}
+function closeAddModal() {
+  $("addModal").hidden = true;
+  $("add-fig-form").reset();
+  $("photo-preview-wrap").hidden = true;
+  $("photo-clear-btn").hidden = true;
+  selectedPhotoDataUrl = null;
+}
+
+function renderCustomList() {
+  const list = getCustomFigures();
+  const countEl = $("custom-count");
+  if (countEl) countEl.textContent = list.length;
+  const ul = $("custom-list");
+  if (!ul) return;
+  if (!list.length) {
+    ul.innerHTML = `<li style="color:rgba(255,255,255,.4);font-size:12.5px;text-align:center;padding:10px 0;">No agregaste figuras propias todavía.</li>`;
+    return;
+  }
+  ul.innerHTML = list.map(f => `
+    <li class="custom-item">
+      <img src="${escapeHtml(f.img)}" alt="" class="custom-item__thumb">
+      <div class="custom-item__info">
+        <span class="custom-item__name">${escapeHtml(f.name)}</span>
+        <span class="custom-item__meta">${f.points.join(" / ")} pts${f.keywords.length ? " · " + escapeHtml(f.keywords.slice(0, 2).join(", ")) : ""}</span>
+      </div>
+      <button type="button" class="custom-item__del" data-del-custom="${f.id}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+    </li>
+  `).join("");
+}
+
+function deleteCustomFigure(id) {
+  let list = getCustomFigures();
+  const fig = list.find(f => f.id === id);
+  if (!fig) return;
+  if (!confirm(`¿Eliminar la miniatura "${fig.name}"?`)) return;
+  list = list.filter(f => f.id !== id);
+  setCustomFigures(list);
+  renderFigures();
+  applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
+  renderCustomList();
+  toast(`Eliminada: ${fig.name}`);
+  syncWithHomelab(false);
+}
+
 /* ============================ Init ============================ */
 document.addEventListener("DOMContentLoaded", () => {
   // Orden alfabético por nombre (no importa el orden en data.js)
@@ -326,6 +464,95 @@ document.addEventListener("DOMContentLoaded", () => {
   $("show-equipo").addEventListener("click", toggleEquipo);
   $("toggle-btn").addEventListener("click", openSidebar);
 
+  // Botones para abrir modal de agregar figura
+  const openAddBtn = $("open-add-btn");
+  if (openAddBtn) openAddBtn.addEventListener("click", openAddModal);
+  const emptyAddBtn = $("empty-add-btn");
+  if (emptyAddBtn) emptyAddBtn.addEventListener("click", openAddModal);
+
+  // Modal Agregar Figura
+  const addModal = $("addModal");
+  $("add-modal-close").addEventListener("click", closeAddModal);
+  addModal.addEventListener("click", e => { if (e.target === addModal) closeAddModal(); });
+
+  // Selector y foto
+  $("fig-photo").addEventListener("change", async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      selectedPhotoDataUrl = await resizeImage(file, 400);
+      $("photo-preview").src = selectedPhotoDataUrl;
+      $("photo-preview-wrap").hidden = false;
+      $("photo-clear-btn").hidden = false;
+    } catch (_) {
+      toast("No se pudo cargar la foto");
+    }
+  });
+
+  $("photo-clear-btn").addEventListener("click", () => {
+    $("fig-photo").value = "";
+    selectedPhotoDataUrl = null;
+    $("photo-preview-wrap").hidden = true;
+    $("photo-clear-btn").hidden = true;
+  });
+
+  // Guardar figura desde el formulario
+  $("add-fig-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("fig-name").value.trim();
+    const pointsRaw = $("fig-points").value.trim();
+    const code = $("fig-code").value.trim();
+    const keywordsRaw = $("fig-keywords").value.trim();
+
+    if (!name) { toast("Ingresá un nombre"); return; }
+
+    const points = pointsRaw.split(/[,;\s]+/)
+      .map(p => parseInt(p, 10))
+      .filter(p => !isNaN(p) && p > 0);
+
+    if (!points.length) {
+      toast("Ingresá al menos un puntaje válido");
+      return;
+    }
+    points.sort((a, b) => a - b);
+
+    const keywords = keywordsRaw
+      ? keywordsRaw.split(",").map(k => k.trim()).filter(Boolean)
+      : [];
+
+    const id = "c" + Date.now();
+    const alt = name + (code ? " " + code : " c-" + id.slice(-4));
+    const img = selectedPhotoDataUrl || getDefaultMiniSvg(name);
+
+    const newFig = {
+      id,
+      name,
+      img,
+      alt,
+      keywords,
+      points,
+      isCustom: true,
+      updatedAt: Date.now()
+    };
+
+    const list = getCustomFigures();
+    list.push(newFig);
+    setCustomFigures(list);
+
+    renderFigures();
+    applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
+
+    closeAddModal();
+    toast(`¡${name} agregada!`);
+    syncWithHomelab(false);
+  });
+
+  // Borrar figura custom de la lista
+  $("custom-list").addEventListener("click", e => {
+    const btn = e.target.closest("[data-del-custom]");
+    if (btn) deleteCustomFigure(btn.dataset.delCustom);
+  });
+
   // Sidebar
   $("sidebar-close").addEventListener("click", closeSidebar);
   $("scrim").addEventListener("click", closeSidebar);
@@ -338,11 +565,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (del)  deleteNamedTeam(del.dataset.del);
   });
 
-  // Modal
+  // Modal imagen zoom
   $("modal-close").addEventListener("click", hideImage);
   modal.addEventListener("click", e => { if (e.target === modal) hideImage(); });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { hideImage(); closeSidebar(); }
+    if (e.key === "Escape") { hideImage(); closeSidebar(); closeAddModal(); }
   });
 
   // Homelab Sync

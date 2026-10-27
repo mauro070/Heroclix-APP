@@ -48,12 +48,18 @@
       <input id="searchbar" type="text" placeholder="Buscar figura..." autocomplete="off">
       <button class="search__clear" id="clear" aria-label="Limpiar"><i class="fas fa-times"></i></button>
     </div>
+    <button class="search__add" id="open-add-btn" aria-label="Agregar nueva figura" title="Agregar nueva figura">
+      <i class="fas fa-plus"></i>
+    </button>
   </div>
 
   <!-- ===== Lista de figuras (render por JS) ===== -->
   <main class="roster">
     <ol class="unit-list" id="heroclix-list"></ol>
-    <p class="empty" id="empty" hidden>No hay figuras que coincidan.</p>
+    <div class="empty" id="empty" hidden>
+      <p>No hay figuras que coincidan.</p>
+      <button type="button" class="empty__btn" id="empty-add-btn"><i class="fas fa-plus"></i> Agregar nueva miniatura</button>
+    </div>
   </main>
 
   <!-- ===== Modal imagen ===== -->
@@ -88,6 +94,62 @@
     <p class="saved__empty" id="saved-empty">Todavía no guardaste ningún equipo.</p>
   </aside>
   <div class="scrim" id="scrim" hidden></div>
+
+  <!-- ===== Modal Agregar Miniatura ===== -->
+  <div id="addModal" class="modal-form" hidden>
+    <div class="modal-card">
+      <div class="modal-card__head">
+        <h2 class="modal-card__title">Nueva miniatura</h2>
+        <button type="button" class="modal-card__close" id="add-modal-close" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="add-fig-form" class="modal-form__body">
+        <div class="form-group">
+          <label class="form-label" for="fig-name">Nombre de la figura *</label>
+          <input type="text" id="fig-name" class="form-input" placeholder="Ej: Spider-Man" required maxlength="50" autocomplete="off">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-group--flex">
+            <label class="form-label" for="fig-points">Puntos (diales) *</label>
+            <input type="text" id="fig-points" class="form-input" placeholder="Ej: 50 o 50, 100" required autocomplete="off">
+            <span class="form-tip">Separados por coma si tiene más de un dial</span>
+          </div>
+          <div class="form-group form-group--flex">
+            <label class="form-label" for="fig-code">Código / Set</label>
+            <input type="text" id="fig-code" class="form-input" placeholder="Ej: xmrf001" maxlength="30" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="fig-keywords">Keywords (palabras clave)</label>
+          <input type="text" id="fig-keywords" class="form-input" placeholder="Ej: Avengers, Cosmic, Warrior" autocomplete="off">
+          <span class="form-tip">Separalas por coma</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto / Imagen</label>
+          <div class="photo-picker">
+            <label for="fig-photo" class="photo-btn">
+              <i class="fas fa-camera"></i> Tomar foto o elegir archivo
+            </label>
+            <input type="file" id="fig-photo" accept="image/*" class="sr-only">
+            <button type="button" id="photo-clear-btn" class="photo-clear" hidden><i class="fas fa-trash"></i> Quitar foto</button>
+          </div>
+          <div id="photo-preview-wrap" class="photo-preview-wrap" hidden>
+            <img id="photo-preview" class="photo-preview-img" src="" alt="Vista previa">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--save-fig"><i class="fas fa-plus-circle"></i> Guardar miniatura</button>
+      </form>
+
+      <div class="custom-sec" id="custom-sec">
+        <h3 class="custom-sec__title">Tus miniaturas agregadas (<span id="custom-count">0</span>)</h3>
+        <ul class="custom-list" id="custom-list"></ul>
+      </div>
+    </div>
+  </div>
 
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>

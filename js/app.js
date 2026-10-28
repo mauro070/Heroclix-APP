@@ -157,7 +157,7 @@ async function checkHomelabStatus() {
   const text = $("sync-text");
   if (!dot || !text) return false;
   try {
-    const res = await fetch("https://mauro.taild9dcef.ts.net:8444/api/health", { mode: "cors", signal: AbortSignal.timeout(2500) });
+    const res = await fetch("https://mauro.taild9dcef.ts.net:8444/api/health", { mode: "cors", signal: AbortSignal.timeout(6000) });
     if (res.ok) {
       dot.className = "sync-box__dot is-online";
       text.textContent = "Homelab conectado";
@@ -177,7 +177,7 @@ async function syncWithHomelab(isManual = false) {
 
   try {
     const localTeams = getSaved();
-    const res = await fetch(HOMELAB_API, { mode: "cors", signal: AbortSignal.timeout(4000) });
+    const res = await fetch(HOMELAB_API, { mode: "cors", signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const remoteData = await res.json();
     const remoteTeams = Array.isArray(remoteData.teams) ? remoteData.teams : [];
@@ -233,7 +233,7 @@ async function syncWithHomelab(isManual = false) {
         current: currentKeys(),
         custom_figures: mergedCustom
       }),
-      signal: AbortSignal.timeout(4000)
+      signal: AbortSignal.timeout(8000)
     });
 
     checkHomelabStatus();
@@ -241,7 +241,10 @@ async function syncWithHomelab(isManual = false) {
   } catch (err) {
     console.warn("Homelab sync:", err);
     checkHomelabStatus();
-    if (isManual) toast("No se pudo conectar al Homelab (revisá Tailscale)");
+    const isTimeout = err && (err.name === "TimeoutError" || String(err).includes("timeout"));
+    if (isManual) {
+      toast(isTimeout ? "Tiempo de espera agotado (Tailscale conectando...)" : "No se pudo conectar al Homelab (revisá Tailscale)");
+    }
   } finally {
     isSyncing = false;
     if (btn) btn.classList.remove("is-loading");

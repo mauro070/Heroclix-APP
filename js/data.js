@@ -117,5 +117,5 @@ const FIGURES = [
   {"name": "Yellow Ranger", "img": "Images/Minis/pr_yellow_ranger.jpg", "alt": "Yellow Ranger mmpr003", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Scientist", "Vehicle", "Warrior"], "points": [60]},
   {"name": "Black Ranger", "img": "Images/Minis/pr_black_ranger.jpg", "alt": "Black Ranger mmpr004", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Vehicle", "Warrior"], "points": [60]},
   {"name": "Green Ranger", "img": "Images/Minis/pr_green_ranger.jpg", "alt": "Green Ranger mmpr005", "keywords": ["Martial Artist", "Monster", "Power Rangers", "Ruler", "Warrior"], "points": [60, 100]},
-  {"name": "Rita Repulsa", "img": "Images/Minis/rita_repulsa.svg", "alt": "Rita Repulsa mmpr006", "keywords": ["Cosmic", "Monster", "Mystical", "Ruler"], "points": [235, 300]},
+  {"name": "Rita Repulsa", "img": "Images/Minis/pr_rita_repulsa.jpg", "alt": "Rita Repulsa mmpr006", "keywords": ["Cosmic", "Monster", "Mystical", "Ruler"], "points": [235, 300]},
 ];

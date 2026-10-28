@@ -111,4 +111,11 @@ const FIGURES = [
   {"name": "Unseen", "img": "Images/Minis/ai043.jpg", "alt": "Unseen ai043", "keywords": ["Cosmic", "Soldier", "Spy"], "points": [65]},
   {"name": "Valeria Richards", "img": "Images/Minis/f4027.jpg", "alt": "Valeria Richards ff027", "keywords": ["Fantastic Four", "Latveria", "Scientist"], "points": [40]},
   {"name": "Wolverine", "img": "Images/Minis/xmrf001.jpg", "alt": "Wolverine xmrf001", "keywords": ["Avengers", "Jean Grey School for Higher Learning", "Weapon X", "X-Men"], "points": [45]},
+
+  {"name": "Red Ranger", "img": "Images/Minis/pr_red_ranger.jpg", "alt": "Red Ranger mmpr001", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Vehicle", "Warrior"], "points": [60]},
+  {"name": "Blue Ranger", "img": "Images/Minis/pr_blue_ranger.jpg", "alt": "Blue Ranger mmpr002", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Scientist", "Vehicle", "Warrior"], "points": [60]},
+  {"name": "Yellow Ranger", "img": "Images/Minis/pr_yellow_ranger.jpg", "alt": "Yellow Ranger mmpr003", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Scientist", "Vehicle", "Warrior"], "points": [60]},
+  {"name": "Black Ranger", "img": "Images/Minis/pr_black_ranger.jpg", "alt": "Black Ranger mmpr004", "keywords": ["Armor", "Martial Artist", "Power Rangers", "Vehicle", "Warrior"], "points": [60]},
+  {"name": "Green Ranger", "img": "Images/Minis/pr_green_ranger.jpg", "alt": "Green Ranger mmpr005", "keywords": ["Martial Artist", "Monster", "Power Rangers", "Ruler", "Warrior"], "points": [60, 100]},
+  {"name": "Rita Repulsa", "img": "Images/Minis/rita_repulsa.svg", "alt": "Rita Repulsa mmpr006", "keywords": ["Cosmic", "Monster", "Mystical", "Ruler"], "points": [235, 300]},
 ];

@@ -149,21 +149,33 @@ function loadCurrent() {
 }
 
 /* ============================ Homelab Sync ============================ */
-const HOMELAB_API = "https://mauro.taild9dcef.ts.net:8444/api/heroclix";
+const HOMELAB_ENDPOINTS = [
+  "https://100.79.49.7:8444",
+  "https://mauro.taild9dcef.ts.net:8444"
+];
+let activeApiBase = localStorage.getItem("heroclix_api_base") || HOMELAB_ENDPOINTS[0];
 let isSyncing = false;
 
 async function checkHomelabStatus() {
   const dot = $("sync-dot");
   const text = $("sync-text");
   if (!dot || !text) return false;
-  try {
-    const res = await fetch("https://mauro.taild9dcef.ts.net:8444/api/health", { mode: "cors", signal: AbortSignal.timeout(6000) });
-    if (res.ok) {
-      dot.className = "sync-box__dot is-online";
-      text.textContent = "Homelab conectado";
-      return true;
-    }
-  } catch (_) {}
+
+  const candidates = [activeApiBase, ...HOMELAB_ENDPOINTS.filter(u => u !== activeApiBase)];
+
+  for (const base of candidates) {
+    try {
+      const res = await fetch(`${base}/api/health`, { mode: "cors", signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        activeApiBase = base;
+        localStorage.setItem("heroclix_api_base", base);
+        dot.className = "sync-box__dot is-online";
+        text.textContent = "Homelab conectado";
+        return true;
+      }
+    } catch (_) {}
+  }
+
   dot.className = "sync-box__dot is-offline";
   text.textContent = "Homelab desconectado";
   return false;
@@ -177,7 +189,7 @@ async function syncWithHomelab(isManual = false) {
 
   try {
     const localTeams = getSaved();
-    const res = await fetch(HOMELAB_API, { mode: "cors", signal: AbortSignal.timeout(8000) });
+    const res = await fetch(`${activeApiBase}/api/heroclix`, { mode: "cors", signal: AbortSignal.timeout(6000) });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const remoteData = await res.json();
     const remoteTeams = Array.isArray(remoteData.teams) ? remoteData.teams : [];
@@ -224,7 +236,7 @@ async function syncWithHomelab(isManual = false) {
     }
 
     // Enviar lista combinada al Homelab
-    await fetch(HOMELAB_API, {
+    await fetch(`${activeApiBase}/api/heroclix`, {
       method: "POST",
       mode: "cors",
       headers: { "Content-Type": "application/json" },
@@ -233,7 +245,7 @@ async function syncWithHomelab(isManual = false) {
         current: currentKeys(),
         custom_figures: mergedCustom
       }),
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(6000)
     });
 
     checkHomelabStatus();

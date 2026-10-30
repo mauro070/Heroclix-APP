@@ -61,6 +61,7 @@ function toast(msg) {
 function renderFigures() {
   refreshAllFigures();
   listEl.innerHTML = ALL_FIGURES.map((fig, idx) => {
+    const collectorNumber = fig.collectorNumber || fig.collector_number || fig.code || "";
     const tags = fig.keywords.map(kw =>
       `<a href="#" class="tag" data-kw="${escapeHtml(kw)}">${escapeHtml(kw)}</a>`).join("");
     const dials = fig.points.map(p => `
@@ -69,14 +70,17 @@ function renderFigures() {
           <span class="dial__pts">${p}</span>
         </label>`).join("");
     const customBadge = fig.isCustom ? `<span class="unit__custom-badge" title="Miniatura personalizada">Custom</span>` : "";
+    const collectorBadge = collectorNumber
+      ? `<span class="unit__collector" title="Collector number">${escapeHtml(collectorNumber)}</span>`
+      : "";
     return `
-      <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-name="${escapeHtml(fig.name.toLowerCase())}"
+      <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-name="${escapeHtml(`${fig.name} ${collectorNumber}`.toLowerCase())}"
           data-keywords="${escapeHtml(fig.keywords.join("|").toLowerCase())}">
         <div class="unit__media">
-          <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt)}" loading="lazy" data-zoom>
+          <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt || `${fig.name} ${collectorNumber}`)}" loading="lazy" data-zoom>
         </div>
         <div class="unit__body">
-          <h3 class="unit__name">${escapeHtml(fig.name)}${customBadge}</h3>
+          <h3 class="unit__name"><span>${escapeHtml(fig.name)}</span>${collectorBadge}${customBadge}</h3>
           <div class="unit__tags">${tags}</div>
         </div>
         <div class="unit__dials">${dials}</div>
@@ -348,6 +352,67 @@ function closeSidebar() { $("sidebar").classList.remove("is-open"); $("scrim").h
 
 /* ============================ Modal Nueva Figura ============================ */
 let selectedPhotoDataUrl = null;
+let selectedHcUnitsMeta = null;
+
+function setImportStatus(message = "", kind = "") {
+  const status = $("hcunits-import-status");
+  if (!status) return;
+  status.textContent = message;
+  status.className = "hcunits-import__status" + (kind ? ` is-${kind}` : "");
+}
+
+async function importFromHcUnits() {
+  const url = $("hcunits-url").value.trim();
+  if (!url) {
+    setImportStatus("Pegá primero el enlace de la unidad.", "error");
+    $("hcunits-url").focus();
+    return;
+  }
+
+  const btn = $("hcunits-import-btn");
+  btn.disabled = true;
+  btn.classList.add("is-loading");
+  setImportStatus("Consultando HCUnits...");
+  try {
+    const response = await fetch(`${HOMELAB_API_BASE}/api/heroclix/import-hcunits`, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(12000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `Error ${response.status}`);
+
+    const points = Array.isArray(data.point_values) ? data.point_values : [];
+    const keywords = Array.isArray(data.keywords) ? data.keywords : [];
+    $("fig-name").value = data.name || "";
+    $("fig-code").value = data.collector_number || "";
+    $("fig-points").value = points.join(", ");
+    $("fig-keywords").value = keywords.join(", ");
+
+    selectedHcUnitsMeta = {
+      id: data.id || "",
+      setId: data.set_id || "",
+      collectorNumber: data.collector_number || ""
+    };
+    selectedPhotoDataUrl = data.img_url || null;
+    if (selectedPhotoDataUrl) {
+      $("photo-preview").src = selectedPhotoDataUrl;
+      $("photo-preview-wrap").hidden = false;
+      $("photo-clear-btn").hidden = false;
+    }
+    setImportStatus(`Lista: ${data.name}${data.collector_number ? ` · ${data.collector_number}` : ""}`, "ok");
+    toast("Datos importados de HCUnits");
+  } catch (error) {
+    selectedHcUnitsMeta = null;
+    const timeout = error && (error.name === "TimeoutError" || String(error).includes("timeout"));
+    setImportStatus(timeout ? "La consulta tardó demasiado. Revisá Tailscale e intentá otra vez." : (error.message || "No se pudo importar la unidad."), "error");
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+  }
+}
 
 function resizeImage(file, maxDim = 400) {
   return new Promise((resolve, reject) => {
@@ -392,6 +457,8 @@ function closeAddModal() {
   $("photo-preview-wrap").hidden = true;
   $("photo-clear-btn").hidden = true;
   selectedPhotoDataUrl = null;
+  selectedHcUnitsMeta = null;
+  setImportStatus();
 }
 
 function renderCustomList() {
@@ -408,7 +475,7 @@ function renderCustomList() {
     <li class="custom-item">
       <img src="${escapeHtml(f.img)}" alt="" class="custom-item__thumb">
       <div class="custom-item__info">
-        <span class="custom-item__name">${escapeHtml(f.name)}</span>
+        <span class="custom-item__name">${escapeHtml(f.name)}${(f.collectorNumber || f.collector_number || f.code) ? ` · ${escapeHtml(f.collectorNumber || f.collector_number || f.code)}` : ""}</span>
         <span class="custom-item__meta">${f.points.join(" / ")} pts${f.keywords.length ? " · " + escapeHtml(f.keywords.slice(0, 2).join(", ")) : ""}</span>
       </div>
       <button type="button" class="custom-item__del" data-del-custom="${f.id}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
@@ -481,6 +548,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const addModal = $("addModal");
   $("add-modal-close").addEventListener("click", closeAddModal);
   addModal.addEventListener("click", e => { if (e.target === addModal) closeAddModal(); });
+  $("hcunits-import-btn").addEventListener("click", importFromHcUnits);
+  $("hcunits-url").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); importFromHcUnits(); }
+  });
 
   // Selector y foto
   $("fig-photo").addEventListener("change", async e => {
@@ -499,6 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("photo-clear-btn").addEventListener("click", () => {
     $("fig-photo").value = "";
     selectedPhotoDataUrl = null;
+    if (selectedHcUnitsMeta) selectedHcUnitsMeta.imageRemoved = true;
     $("photo-preview-wrap").hidden = true;
     $("photo-clear-btn").hidden = true;
   });
@@ -527,12 +599,18 @@ document.addEventListener("DOMContentLoaded", () => {
       ? keywordsRaw.split(",").map(k => k.trim()).filter(Boolean)
       : [];
 
-    const id = "c" + Date.now();
-    const alt = name + (code ? " " + code : " c-" + id.slice(-4));
+    const id = selectedHcUnitsMeta && selectedHcUnitsMeta.id
+      ? `hcunits:${selectedHcUnitsMeta.id}`
+      : "c" + Date.now();
+    const collectorNumber = code || (selectedHcUnitsMeta && selectedHcUnitsMeta.collectorNumber) || "";
+    const alt = name + (collectorNumber ? " " + collectorNumber : " c-" + id.slice(-4));
     const img = selectedPhotoDataUrl || getDefaultMiniSvg(name);
 
     const newFig = {
       id,
+      hcunitsId: selectedHcUnitsMeta ? selectedHcUnitsMeta.id : "",
+      setId: selectedHcUnitsMeta ? selectedHcUnitsMeta.setId : "",
+      collectorNumber,
       name,
       img,
       alt,
@@ -543,14 +621,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const list = getCustomFigures();
-    list.push(newFig);
+    const existingIndex = list.findIndex(f => f.id === id || (newFig.hcunitsId && f.hcunitsId === newFig.hcunitsId));
+    if (existingIndex >= 0) list[existingIndex] = newFig;
+    else list.push(newFig);
     setCustomFigures(list);
 
     renderFigures();
     applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
 
     closeAddModal();
-    toast(`¡${name} agregada!`);
+    toast(existingIndex >= 0 ? `¡${name} actualizada!` : `¡${name} agregada!`);
     syncWithHomelab(false);
   });
 

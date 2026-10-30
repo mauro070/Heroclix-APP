@@ -193,11 +193,26 @@ body {
   gap: 6px;
 }
 .unit__name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
   font-family: 'Oswald', sans-serif;
   font-weight: 600; font-size: 20px;
   letter-spacing: .3px;
   color: var(--blue-2);
   text-transform: uppercase;
+}
+.unit__collector {
+  display: inline-block;
+  font: 700 11px 'Inter', sans-serif;
+  letter-spacing: .25px;
+  color: var(--amber-d);
+  background: rgba(244, 167, 46, .12);
+  border: 1px solid rgba(244, 167, 46, .28);
+  border-radius: 5px;
+  padding: 2px 6px;
+  text-transform: none;
 }
 .unit__tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
@@ -369,6 +384,8 @@ body {
   .dial { min-width: 56px; padding: 6px 10px; }
   .dial__pts { font-size: 19px; }
   .search__mode { padding: 0 10px; font-size: 14px; }
+  .hcunits-import__controls { flex-direction: column; }
+  .hcunits-import__btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -579,6 +596,42 @@ body {
   flex-direction: column;
   gap: 14px;
 }
+
+.hcunits-import {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(244, 167, 46, .28);
+  border-radius: 11px;
+  background: rgba(244, 167, 46, .07);
+}
+.hcunits-import__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--amber);
+}
+.hcunits-import__head > i { margin-top: 3px; }
+.hcunits-import__head h3 { color: #fff; font-size: 14px; }
+.hcunits-import__head p { margin-top: 2px; color: #94a3b8; font-size: 11.5px; line-height: 1.4; }
+.hcunits-import__controls { display: flex; gap: 8px; }
+.hcunits-import__controls .form-input { min-width: 0; }
+.hcunits-import__btn { flex: 0 0 auto; height: 42px; padding: 0 13px; }
+.hcunits-import__status { min-height: 15px; color: #94a3b8; font-size: 11.5px; }
+.hcunits-import__status.is-ok { color: var(--green); }
+.hcunits-import__status.is-error { color: #ff7b86; }
+.form-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.form-divider::before, .form-divider::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
 
 .form-group {
   display: flex;

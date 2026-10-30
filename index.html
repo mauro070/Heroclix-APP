@@ -104,6 +104,25 @@
       </div>
 
       <form id="add-fig-form" class="modal-form__body">
+        <section class="hcunits-import" aria-labelledby="hcunits-import-title">
+          <div class="hcunits-import__head">
+            <i class="fas fa-magic" aria-hidden="true"></i>
+            <div>
+              <h3 id="hcunits-import-title">Importar desde HCUnits</h3>
+              <p>Pegá el enlace de la unidad y completamos sus datos e imagen.</p>
+            </div>
+          </div>
+          <div class="hcunits-import__controls">
+            <input type="url" id="hcunits-url" class="form-input" placeholder="https://hcunits.net/units/dofp005/" autocomplete="off">
+            <button type="button" id="hcunits-import-btn" class="btn btn--secondary hcunits-import__btn">
+              <i class="fas fa-download"></i> Importar
+            </button>
+          </div>
+          <p id="hcunits-import-status" class="hcunits-import__status" aria-live="polite"></p>
+        </section>
+
+        <div class="form-divider"><span>Datos de la miniatura</span></div>
+
         <div class="form-group">
           <label class="form-label" for="fig-name">Nombre de la figura *</label>
           <input type="text" id="fig-name" class="form-input" placeholder="Ej: Spider-Man" required maxlength="50" autocomplete="off">
@@ -116,8 +135,8 @@
             <span class="form-tip">Separados por coma si tiene más de un dial</span>
           </div>
           <div class="form-group form-group--flex">
-            <label class="form-label" for="fig-code">Código / Set</label>
-            <input type="text" id="fig-code" class="form-input" placeholder="Ej: xmrf001" maxlength="30" autocomplete="off">
+            <label class="form-label" for="fig-code">Collector number</label>
+            <input type="text" id="fig-code" class="form-input" placeholder="Ej: 005 o HBX1-006" maxlength="40" autocomplete="off">
           </div>
         </div>
 

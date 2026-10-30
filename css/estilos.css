@@ -159,6 +159,9 @@ body {
 .unit {
   display: flex;
   align-items: stretch;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   background: rgba(248, 250, 252, 0.05);   /* antes: var(--surface) */
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);

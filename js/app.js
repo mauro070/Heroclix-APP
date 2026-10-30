@@ -5,6 +5,9 @@ const LIMITE = 300;                       // formato estándar de build
 const KEY_CURRENT = "heroclix-equipo";    // equipo en edición
 const KEY_SAVED   = "heroclix-equipos";   // equipos guardados (nombrados)
 const KEY_CUSTOM  = "heroclix-custom-figures"; // miniaturas agregadas por el usuario
+const KEY_OVERRIDES = "heroclix-figure-overrides"; // cambios sobre el catálogo incluido
+const KEY_HIDDEN = "heroclix-hidden-figures"; // miniaturas del catálogo borradas
+const KEY_DELETED_CUSTOM = "heroclix-deleted-custom-ids"; // tombstones para que Sync no las restaure
 
 /* ============================ Refs ============================ */
 const listEl     = document.getElementById("heroclix-list");
@@ -33,6 +36,27 @@ function getCustomFigures() {
 function setCustomFigures(arr) {
   try { localStorage.setItem(KEY_CUSTOM, JSON.stringify(arr)); } catch (e) {}
 }
+function getFigureOverrides() {
+  try { return JSON.parse(localStorage.getItem(KEY_OVERRIDES) || "{}"); }
+  catch (e) { return {}; }
+}
+function setFigureOverrides(value) {
+  try { localStorage.setItem(KEY_OVERRIDES, JSON.stringify(value)); } catch (e) {}
+}
+function getHiddenFigures() {
+  try { return JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"); }
+  catch (e) { return []; }
+}
+function setHiddenFigures(value) {
+  try { localStorage.setItem(KEY_HIDDEN, JSON.stringify(value)); } catch (e) {}
+}
+function getDeletedCustomIds() {
+  try { return JSON.parse(localStorage.getItem(KEY_DELETED_CUSTOM) || "[]"); }
+  catch (e) { return []; }
+}
+function setDeletedCustomIds(value) {
+  try { localStorage.setItem(KEY_DELETED_CUSTOM, JSON.stringify(value)); } catch (e) {}
+}
 
 function getDefaultMiniSvg(name) {
   const initial = (name || "?").charAt(0).toUpperCase();
@@ -42,8 +66,15 @@ function getDefaultMiniSvg(name) {
 
 let ALL_FIGURES = [];
 function refreshAllFigures() {
-  const custom = getCustomFigures();
-  ALL_FIGURES = [...FIGURES, ...custom];
+  const hidden = new Set(getHiddenFigures());
+  const overrides = getFigureOverrides();
+  const catalog = FIGURES.map((figure, index) => {
+    const catalogKey = `catalog:${index}:${figure.alt}`;
+    return { ...figure, ...(overrides[catalogKey] || {}), alt: figure.alt, catalogKey, isCatalog: true };
+  }).filter(figure => !hidden.has(figure.catalogKey));
+  const deletedCustom = new Set(getDeletedCustomIds());
+  const custom = getCustomFigures().filter(figure => !deletedCustom.has(figure.id));
+  ALL_FIGURES = [...catalog, ...custom];
   ALL_FIGURES.sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
 }
 
@@ -74,7 +105,7 @@ function renderFigures() {
       ? `<span class="unit__collector" title="Collector number">${escapeHtml(collectorNumber)}</span>`
       : "";
     return `
-      <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-name="${escapeHtml(`${fig.name} ${collectorNumber}`.toLowerCase())}"
+      <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-fig="${idx}" data-name="${escapeHtml(`${fig.name} ${collectorNumber}`.toLowerCase())}"
           data-keywords="${escapeHtml(fig.keywords.join("|").toLowerCase())}">
         <div class="unit__media">
           <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt || `${fig.name} ${collectorNumber}`)}" loading="lazy" data-zoom>
@@ -205,13 +236,22 @@ async function syncWithHomelab(isManual = false) {
     try { localStorage.setItem(KEY_SAVED, JSON.stringify(merged)); } catch (e) {}
     renderSaved();
 
+    // Sincronizar borrados de figuras personalizadas antes de combinar la lista.
+    const deletedCustomIds = Array.from(new Set([
+      ...getDeletedCustomIds(),
+      ...(Array.isArray(remoteData.deleted_custom_ids) ? remoteData.deleted_custom_ids : [])
+    ]));
+    const deletedCustomSet = new Set(deletedCustomIds);
+    setDeletedCustomIds(deletedCustomIds);
+
     // Sincronizar figuras personalizadas
     const localCustom = getCustomFigures();
     const remoteCustom = Array.isArray(remoteData.custom_figures) ? remoteData.custom_figures : [];
     const customMap = new Map();
-    remoteCustom.forEach(f => customMap.set(f.alt || f.id || f.name, f));
+    remoteCustom.filter(f => !deletedCustomSet.has(f.id)).forEach(f => customMap.set(f.id || f.alt || f.name, f));
     localCustom.forEach(f => {
-      const k = f.alt || f.id || f.name;
+      if (deletedCustomSet.has(f.id)) return;
+      const k = f.id || f.alt || f.name;
       const remote = customMap.get(k);
       if (!remote || (f.updatedAt && f.updatedAt >= (remote.updatedAt || 0))) {
         customMap.set(k, f);
@@ -220,7 +260,28 @@ async function syncWithHomelab(isManual = false) {
     const mergedCustom = Array.from(customMap.values());
     const hadCustomChange = JSON.stringify(mergedCustom) !== JSON.stringify(localCustom);
     setCustomFigures(mergedCustom);
-    if (hadCustomChange) {
+
+    // Las ediciones del catálogo se combinan por clave y gana la más reciente.
+    const localOverrides = getFigureOverrides();
+    const remoteOverrides = remoteData.figure_overrides && typeof remoteData.figure_overrides === "object"
+      ? remoteData.figure_overrides : {};
+    const mergedOverrides = { ...remoteOverrides };
+    Object.entries(localOverrides).forEach(([key, value]) => {
+      const remote = mergedOverrides[key];
+      if (!remote || (value.updatedAt || 0) >= (remote.updatedAt || 0)) mergedOverrides[key] = value;
+    });
+    const hadOverrideChange = JSON.stringify(mergedOverrides) !== JSON.stringify(localOverrides);
+    setFigureOverrides(mergedOverrides);
+
+    // Borrar del catálogo es acumulativo: una sincronización nunca resucita la miniatura.
+    const mergedHidden = Array.from(new Set([
+      ...getHiddenFigures(),
+      ...(Array.isArray(remoteData.hidden_figures) ? remoteData.hidden_figures : [])
+    ]));
+    const hadHiddenChange = JSON.stringify(mergedHidden) !== JSON.stringify(getHiddenFigures());
+    setHiddenFigures(mergedHidden);
+
+    if (hadCustomChange || hadOverrideChange || hadHiddenChange) {
       renderFigures();
       applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
     }
@@ -239,7 +300,10 @@ async function syncWithHomelab(isManual = false) {
       body: JSON.stringify({
         teams: merged,
         current: currentKeys(),
-        custom_figures: mergedCustom
+        custom_figures: mergedCustom,
+        figure_overrides: mergedOverrides,
+        hidden_figures: mergedHidden,
+        deleted_custom_ids: deletedCustomIds
       }),
       signal: AbortSignal.timeout(6000)
     });
@@ -353,6 +417,7 @@ function closeSidebar() { $("sidebar").classList.remove("is-open"); $("scrim").h
 /* ============================ Modal Nueva Figura ============================ */
 let selectedPhotoDataUrl = null;
 let selectedHcUnitsMeta = null;
+let selectedEditingFigure = null;
 
 function setImportStatus(message = "", kind = "") {
   const status = $("hcunits-import-status");
@@ -446,19 +511,58 @@ function resizeImage(file, maxDim = 400) {
   });
 }
 
-function openAddModal() {
-  $("addModal").hidden = false;
-  $("fig-name").focus();
-  renderCustomList();
-}
-function closeAddModal() {
-  $("addModal").hidden = true;
+function resetFigureForm() {
   $("add-fig-form").reset();
   $("photo-preview-wrap").hidden = true;
   $("photo-clear-btn").hidden = true;
   selectedPhotoDataUrl = null;
   selectedHcUnitsMeta = null;
+  selectedEditingFigure = null;
   setImportStatus();
+}
+
+function setFigureFormMode(isEditing) {
+  $("add-modal-title").textContent = isEditing ? "Editar miniatura" : "Nueva miniatura";
+  $("save-fig-label").textContent = isEditing ? "Guardar cambios" : "Guardar miniatura";
+  $("save-fig-icon").className = isEditing ? "fas fa-save" : "fas fa-plus-circle";
+}
+
+function openAddModal() {
+  resetFigureForm();
+  setFigureFormMode(false);
+  $("addModal").hidden = false;
+  $("fig-name").focus();
+  renderCustomList();
+}
+
+function openEditModal(figure) {
+  resetFigureForm();
+  selectedEditingFigure = figure;
+  selectedPhotoDataUrl = figure.img || null;
+  selectedHcUnitsMeta = figure.hcunitsId ? {
+    id: figure.hcunitsId,
+    setId: figure.setId || "",
+    collectorNumber: figure.collectorNumber || ""
+  } : null;
+  setFigureFormMode(true);
+  $("fig-name").value = figure.name || "";
+  $("fig-code").value = figure.collectorNumber || figure.collector_number || figure.code || "";
+  $("fig-points").value = (figure.points || []).join(", ");
+  $("fig-keywords").value = (figure.keywords || []).join(", ");
+  if (selectedPhotoDataUrl) {
+    $("photo-preview").src = selectedPhotoDataUrl;
+    $("photo-preview-wrap").hidden = false;
+    $("photo-clear-btn").hidden = false;
+  }
+  $("addModal").hidden = false;
+  renderCustomList();
+  $("fig-name").focus();
+}
+
+function closeAddModal() {
+  $("addModal").hidden = true;
+  resetFigureForm();
+  setFigureFormMode(false);
 }
 
 function renderCustomList() {
@@ -483,24 +587,71 @@ function renderCustomList() {
   `).join("");
 }
 
-function deleteCustomFigure(id) {
-  let list = getCustomFigures();
-  const fig = list.find(f => f.id === id);
-  if (!fig) return;
-  if (!confirm(`¿Eliminar la miniatura "${fig.name}"?`)) return;
-  list = list.filter(f => f.id !== id);
-  setCustomFigures(list);
+function removeUnusedFigureFromTeams(figure) {
+  // Si queda otra copia con la misma clave, la selección sigue siendo válida.
+  if (ALL_FIGURES.some(item => item.alt === figure.alt)) return;
+  const prefix = `${figure.alt}|`;
+  let current = [];
+  try { current = JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"); } catch (_) {}
+  current = current.filter(key => !key.startsWith(prefix));
+  try { localStorage.setItem(KEY_CURRENT, JSON.stringify(current)); } catch (_) {}
+
+  const saved = getSaved().map(team => {
+    const keys = (team.keys || []).filter(key => !key.startsWith(prefix));
+    const total = keys.reduce((sum, key) => sum + (parseInt(key.split("|").pop(), 10) || 0), 0);
+    return { ...team, keys, total, units: keys.length, date: Date.now() };
+  });
+  try { localStorage.setItem(KEY_SAVED, JSON.stringify(saved)); } catch (_) {}
+}
+
+function deleteFigure(figure) {
+  if (!figure || !confirm(`¿Eliminar la miniatura "${figure.name}"?`)) return;
+  if (figure.isCustom) {
+    setCustomFigures(getCustomFigures().filter(item => item.id !== figure.id));
+    setDeletedCustomIds(Array.from(new Set([...getDeletedCustomIds(), figure.id])));
+  } else if (figure.catalogKey) {
+    setHiddenFigures(Array.from(new Set([...getHiddenFigures(), figure.catalogKey])));
+    const overrides = getFigureOverrides();
+    delete overrides[figure.catalogKey];
+    setFigureOverrides(overrides);
+  }
   renderFigures();
+  removeUnusedFigureFromTeams(figure);
   applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
+  renderSaved();
   renderCustomList();
-  toast(`Eliminada: ${fig.name}`);
+  toast(`Eliminada: ${figure.name}`);
   syncWithHomelab(false);
+}
+
+function deleteCustomFigure(id) {
+  const figure = getCustomFigures().find(item => item.id === id);
+  if (figure) deleteFigure({ ...figure, isCustom: true });
+}
+
+/* ============================ Menú contextual de miniatura ============================ */
+let actionFigure = null;
+let suppressNextListClick = false;
+
+function openFigureActions(figure) {
+  if (!figure) return;
+  actionFigure = figure;
+  const code = figure.collectorNumber || figure.collector_number || figure.code || "";
+  $("figure-actions-name").textContent = figure.name + (code ? ` · ${code}` : "");
+  $("figure-actions").hidden = false;
+  suppressNextListClick = true;
+  setTimeout(() => { suppressNextListClick = false; }, 900);
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function closeFigureActions() {
+  $("figure-actions").hidden = true;
+  actionFigure = null;
 }
 
 /* ============================ Init ============================ */
 document.addEventListener("DOMContentLoaded", () => {
-  // Orden alfabético por nombre (no importa el orden en data.js)
-  FIGURES.sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+  // refreshAllFigures ordena una copia; el orden fuente se conserva para que catalogKey sea estable.
   renderFigures();
   loadCurrent();
   renderSaved();
@@ -511,6 +662,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Lista: keyword / imagen
   listEl.addEventListener("click", e => {
+    if (suppressNextListClick) {
+      suppressNextListClick = false;
+      e.preventDefault();
+      return;
+    }
     const tag = e.target.closest(".tag");
     if (tag) {
       e.preventDefault();
@@ -521,6 +677,48 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (e.target.matches("[data-zoom]")) showImage(e.target);
+  });
+
+  // Pulsación prolongada para editar o borrar una miniatura.
+  let holdTimer = null;
+  let holdUnit = null;
+  let holdStartX = 0;
+  let holdStartY = 0;
+  const cancelHold = () => {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    if (holdUnit) holdUnit.classList.remove("is-holding");
+    holdUnit = null;
+  };
+  listEl.addEventListener("pointerdown", e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest(".dial, .tag")) return;
+    const unit = e.target.closest(".unit");
+    if (!unit) return;
+    holdUnit = unit;
+    holdStartX = e.clientX;
+    holdStartY = e.clientY;
+    holdTimer = setTimeout(() => {
+      const figure = ALL_FIGURES[Number(unit.dataset.fig)];
+      unit.classList.remove("is-holding");
+      openFigureActions(figure);
+      holdTimer = null;
+      holdUnit = null;
+    }, 650);
+    unit.classList.add("is-holding");
+  });
+  listEl.addEventListener("pointermove", e => {
+    if (holdTimer && (Math.abs(e.clientX - holdStartX) > 12 || Math.abs(e.clientY - holdStartY) > 12)) cancelHold();
+  });
+  listEl.addEventListener("pointerup", cancelHold);
+  listEl.addEventListener("pointercancel", cancelHold);
+  listEl.addEventListener("pointerleave", cancelHold);
+  listEl.addEventListener("contextmenu", e => {
+    const unit = e.target.closest(".unit");
+    if (!unit || e.target.closest(".dial, .tag")) return;
+    e.preventDefault();
+    cancelHold();
+    openFigureActions(ALL_FIGURES[Number(unit.dataset.fig)]);
   });
 
   // Diales: exclusividad por figura + recalculo + autosave
@@ -543,6 +741,21 @@ document.addEventListener("DOMContentLoaded", () => {
   if (openAddBtn) openAddBtn.addEventListener("click", openAddModal);
   const emptyAddBtn = $("empty-add-btn");
   if (emptyAddBtn) emptyAddBtn.addEventListener("click", openAddModal);
+
+  // Menú Editar / Borrar abierto con pulsación prolongada.
+  document.querySelectorAll("[data-close-figure-actions]").forEach(element => {
+    element.addEventListener("click", closeFigureActions);
+  });
+  $("figure-edit-btn").addEventListener("click", () => {
+    const figure = actionFigure;
+    closeFigureActions();
+    if (figure) openEditModal(figure);
+  });
+  $("figure-delete-btn").addEventListener("click", () => {
+    const figure = actionFigure;
+    closeFigureActions();
+    if (figure) deleteFigure(figure);
+  });
 
   // Modal Agregar Figura
   const addModal = $("addModal");
@@ -599,12 +812,43 @@ document.addEventListener("DOMContentLoaded", () => {
       ? keywordsRaw.split(",").map(k => k.trim()).filter(Boolean)
       : [];
 
+    const collectorNumber = code || (selectedHcUnitsMeta && selectedHcUnitsMeta.collectorNumber) || "";
+    const img = selectedPhotoDataUrl || getDefaultMiniSvg(name);
+
+    if (selectedEditingFigure) {
+      const original = selectedEditingFigure;
+      const updatedFields = { name, img, collectorNumber, keywords, points, updatedAt: Date.now() };
+      if (original.isCustom) {
+        const list = getCustomFigures();
+        const index = list.findIndex(figure => figure.id === original.id);
+        if (index < 0) { toast("No encontré la miniatura para editar"); return; }
+        list[index] = {
+          ...list[index],
+          ...updatedFields,
+          alt: original.alt,
+          setId: (selectedHcUnitsMeta && selectedHcUnitsMeta.setId) || original.setId || "",
+          hcunitsId: (selectedHcUnitsMeta && selectedHcUnitsMeta.id) || original.hcunitsId || "",
+          isCustom: true
+        };
+        setCustomFigures(list);
+      } else if (original.catalogKey) {
+        const overrides = getFigureOverrides();
+        overrides[original.catalogKey] = updatedFields;
+        setFigureOverrides(overrides);
+      }
+
+      renderFigures();
+      applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
+      closeAddModal();
+      toast(`¡${name} actualizada!`);
+      syncWithHomelab(false);
+      return;
+    }
+
     const id = selectedHcUnitsMeta && selectedHcUnitsMeta.id
       ? `hcunits:${selectedHcUnitsMeta.id}`
       : "c" + Date.now();
-    const collectorNumber = code || (selectedHcUnitsMeta && selectedHcUnitsMeta.collectorNumber) || "";
     const alt = name + (collectorNumber ? " " + collectorNumber : " c-" + id.slice(-4));
-    const img = selectedPhotoDataUrl || getDefaultMiniSvg(name);
 
     const newFig = {
       id,
@@ -656,7 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("modal-close").addEventListener("click", hideImage);
   modal.addEventListener("click", e => { if (e.target === modal) hideImage(); });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { hideImage(); closeSidebar(); closeAddModal(); }
+    if (e.key === "Escape") { hideImage(); closeSidebar(); closeAddModal(); closeFigureActions(); }
   });
 
   // Homelab Sync

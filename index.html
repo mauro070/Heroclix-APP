@@ -99,7 +99,7 @@
   <div id="addModal" class="modal-form" hidden>
     <div class="modal-card">
       <div class="modal-card__head">
-        <h2 class="modal-card__title">Nueva miniatura</h2>
+        <h2 class="modal-card__title" id="add-modal-title">Nueva miniatura</h2>
         <button type="button" class="modal-card__close" id="add-modal-close" aria-label="Cerrar"><i class="fas fa-times"></i></button>
       </div>
 
@@ -160,13 +160,30 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn--primary btn--save-fig"><i class="fas fa-plus-circle"></i> Guardar miniatura</button>
+        <button type="submit" class="btn btn--primary btn--save-fig"><i class="fas fa-plus-circle" id="save-fig-icon"></i> <span id="save-fig-label">Guardar miniatura</span></button>
       </form>
 
       <div class="custom-sec" id="custom-sec">
         <h3 class="custom-sec__title">Tus miniaturas agregadas (<span id="custom-count">0</span>)</h3>
         <ul class="custom-list" id="custom-list"></ul>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Menú contextual de miniatura ===== -->
+  <div id="figure-actions" class="figure-actions" hidden>
+    <div class="figure-actions__scrim" data-close-figure-actions></div>
+    <div class="figure-actions__sheet" role="dialog" aria-modal="true" aria-labelledby="figure-actions-name">
+      <div class="figure-actions__handle" aria-hidden="true"></div>
+      <h2 id="figure-actions-name" class="figure-actions__name"></h2>
+      <p class="figure-actions__hint">Elegí qué querés hacer con esta miniatura.</p>
+      <button type="button" id="figure-edit-btn" class="figure-actions__option">
+        <i class="fas fa-pen"></i><span>Editar</span>
+      </button>
+      <button type="button" id="figure-delete-btn" class="figure-actions__option figure-actions__option--danger">
+        <i class="fas fa-trash-alt"></i><span>Borrar</span>
+      </button>
+      <button type="button" class="figure-actions__cancel" data-close-figure-actions>Cancelar</button>
     </div>
   </div>
 

@@ -169,6 +169,7 @@ body {
 }
 .unit:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(13,27,42,.18); }
 .unit.is-team { box-shadow: 0 0 0 2px var(--green), var(--shadow); }
+.unit.is-holding { transform: scale(.985); box-shadow: 0 0 0 2px var(--amber), var(--shadow); }
 
 /* Imagen como ficha de unidad */
 .unit__media {
@@ -793,4 +794,63 @@ body {
   transition: background .15s;
 }
 .custom-item__del:hover { background: #ef4444; color: #fff; }
+
+/* ============================ Acciones por pulsación prolongada ============================ */
+.figure-actions {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.figure-actions[hidden] { display: none; }
+.figure-actions__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 14, 22, .72);
+  backdrop-filter: blur(3px);
+}
+.figure-actions__sheet {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+  border: 1px solid rgba(255,255,255,.1);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  background: var(--navy);
+  box-shadow: 0 -18px 50px rgba(0,0,0,.45);
+  animation: sheetUp .2s ease;
+}
+.figure-actions__handle {
+  width: 42px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.25);
+}
+.figure-actions__name { color: #fff; font: 600 21px 'Oswald', sans-serif; text-transform: uppercase; }
+.figure-actions__hint { margin: 3px 0 14px; color: #94a3b8; font-size: 12px; }
+.figure-actions__option, .figure-actions__cancel {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 10px;
+  font: 600 15px 'Inter', sans-serif;
+  cursor: pointer;
+}
+.figure-actions__option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 0 16px;
+  color: #fff;
+  background: rgba(255,255,255,.08);
+}
+.figure-actions__option i { width: 20px; color: var(--amber); }
+.figure-actions__option--danger { color: #ff929b; background: rgba(230,57,70,.12); }
+.figure-actions__option--danger i { color: #ff6672; }
+.figure-actions__cancel { margin-top: 12px; color: #cbd5e1; background: transparent; }
+@keyframes sheetUp { from { transform: translateY(35px); opacity: 0; } }
 

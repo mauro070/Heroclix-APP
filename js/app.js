@@ -100,7 +100,6 @@ function renderFigures() {
           <input type="checkbox" class="caja" value="${p}" data-fig="${idx}">
           <span class="dial__pts">${p}</span>
         </label>`).join("");
-    const customBadge = fig.isCustom ? `<span class="unit__custom-badge" title="Miniatura personalizada">Custom</span>` : "";
     const collectorBadge = collectorNumber
       ? `<span class="unit__collector" title="Collector number">${escapeHtml(collectorNumber)}</span>`
       : "";
@@ -111,7 +110,7 @@ function renderFigures() {
           <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt || `${fig.name} ${collectorNumber}`)}" loading="lazy" data-zoom>
         </div>
         <div class="unit__body">
-          <h3 class="unit__name"><span>${escapeHtml(fig.name)}</span>${collectorBadge}${customBadge}</h3>
+          <h3 class="unit__name"><span>${escapeHtml(fig.name)}</span>${collectorBadge}</h3>
           <div class="unit__tags">${tags}</div>
         </div>
         <div class="unit__dials">${dials}</div>

@@ -198,7 +198,7 @@ body {
 }
 .unit__name {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px;
   font-family: 'Oswald', sans-serif;
@@ -523,22 +523,6 @@ body {
   transition: background .15s;
 }
 .empty__btn:hover { background: rgba(244,167,46,.2); }
-
-/* Badge para figuras custom */
-.unit__custom-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: rgba(244,167,46,.18);
-  color: var(--amber);
-  border: 1px solid rgba(244,167,46,.35);
-  border-radius: 4px;
-  padding: 1px 6px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
 
 /* ============================ Modal formulario ============================ */
 .modal-form {

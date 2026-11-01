@@ -46,15 +46,25 @@ async function cartaGetMeta() {
   return cartaMeta;
 }
 
+// Miniaturas cuyo código del catálogo no coincide con el de HCUnits (los ids de HCUnits distinguen mayúsculas).
+const CARTA_ID_ALIASES = {
+  mmpr001: "hbxHBX1-001", mmpr002: "hbxHBX1-002", mmpr003: "hbxHBX1-003", mmpr004: "hbxHBX1-004",
+  mmpr005: "hbxHBX1-006", mmpr006: "hbxHBX1-007",
+  wkm15010: "wkm15M15-010", wkmp19007: "wkm19MP19-007"
+};
+
 // Ids de HCUnits que se prueban para una miniatura, de más a menos probable.
 function cartaCandidateIds(fig) {
   const out = [];
-  const add = value => {
-    const id = String(value || "").trim().toLowerCase().replace(/\s+/g, "");
+  const add = (value, keepCase) => {
+    let id = String(value || "").trim().replace(/\s+/g, "");
+    if (!keepCase) id = id.toLowerCase();
     if (id && !out.includes(id)) out.push(id);
   };
-  add(fig.hcunitsId);
-  add(fig.collectorNumber || fig.collector_number || fig.code);
+  add(fig.hcunitsId, true);
+  const code = String(fig.collectorNumber || fig.collector_number || fig.code || "").trim().toLowerCase().replace(/\s+/g, "");
+  if (CARTA_ID_ALIASES[code]) add(CARTA_ID_ALIASES[code], true);
+  add(code);
   const file = /^Images\/.*?([^\/]+)\.[a-z0-9]+$/i.exec(fig.img || "");
   if (file) add(file[1]);
   return out;
@@ -109,10 +119,11 @@ function cartaLuminance(hex) {
 
 function cartaCellColors(power, meta) {
   const name = power && (meta.powers[power] || {}).color;
-  if (!name) return { bg: "#ffffff", fg: "#111111" };
+  if (!name) return { bg: "#ffffff", fg: "#111111", special: false };
   const hex = meta.colors[name] || (String(name).startsWith("#") ? name : "#ffffff");
   const white = meta.white_text_on.includes(name) || (String(name).startsWith("#") && cartaLuminance(hex) < 0.5);
-  return { bg: hex, fg: white ? "#ffffff" : "#111111" };
+  // Un poder "blanco" (poder especial, rasgo...) se marca con borde negro, como en la carta física.
+  return { bg: hex, fg: white ? "#ffffff" : "#111111", special: name === "white" };
 }
 
 function cartaImg(src, alt, cls) {
@@ -144,8 +155,9 @@ function cartaDialHtml(unit, meta) {
       for (const c of chunk) {
         const value = c[type + "_value"];
         const power = c[type + "_power"];
-        const { bg, fg } = cartaCellColors(power, meta);
-        const cls = startClicks.has(c.click_number) ? ' class="is-start"' : "";
+        const { bg, fg, special } = cartaCellColors(power, meta);
+        const classes = [startClicks.has(c.click_number) ? "is-start" : "", special ? "is-special" : ""].filter(Boolean).join(" ");
+        const cls = classes ? ` class="${classes}"` : "";
         html += value === undefined || value === null
           ? `<td class="is-empty"></td>`
           : `<td${cls} style="background:${bg};color:${fg}" data-power="${escapeHtml(power || "")}" data-click="${c.click_number}" data-type="${type}">${escapeHtml(String(value))}</td>`;

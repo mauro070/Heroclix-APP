@@ -914,6 +914,8 @@ body.carta-open { overflow: hidden; }
 .carta-dial thead .carta-dial__ko { color: #d62828; }
 .carta-dial td { height: 30px; text-align: center; font: 700 14px 'Inter', sans-serif; border-radius: 4px; cursor: pointer; }
 .carta-dial td.is-start { box-shadow: inset 4px 0 0 #1fa34a; }
+.carta-dial td.is-special { box-shadow: inset 0 0 0 2px #000; }
+.carta-dial td.is-special.is-start { box-shadow: inset 4px 0 0 #1fa34a, inset 0 0 0 2px #000; }
 .carta-dial td.is-empty { background: transparent; cursor: default; }
 .carta-dial td.carta-dial__ko { background: transparent; cursor: default; }
 .carta-detail { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.45; color: var(--ink); min-height: 38px; }

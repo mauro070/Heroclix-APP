@@ -33,6 +33,7 @@
 
     <div class="hud__units"><i class="fas fa-users"></i><span id="unidades">0</span></div>
 
+    <button class="hud__btn" id="open-reglas-btn" aria-label="Reglas"><i class="fas fa-book"></i></button>
     <button class="hud__btn" id="show-equipo" aria-label="Ver solo mi equipo"><i class="fas fa-star"></i></button>
     <button class="hud__btn hud__btn--danger" id="Reset" aria-label="Vaciar equipo"><i class="fas fa-trash-alt"></i></button>
   </header>
@@ -196,8 +197,30 @@
     </div>
   </div>
 
+  <!-- ===== Reglas: poderes y habilidades ===== -->
+  <div id="reglas" class="carta-modal" hidden>
+    <div class="carta-modal__scrim" data-close-reglas></div>
+    <div class="carta-modal__sheet reglas-sheet" role="dialog" aria-modal="true" aria-label="Reglas">
+      <button type="button" class="carta-modal__close" data-close-reglas aria-label="Cerrar"><i class="fas fa-times"></i></button>
+      <header class="carta-head">
+        <h2 class="carta-name">Reglas</h2>
+        <p class="carta-sub">Poderes, habilidades de equipo y símbolos</p>
+      </header>
+      <div class="reglas-search">
+        <i class="fas fa-search"></i>
+        <input id="reglas-search" type="search" placeholder="Buscar poder o habilidad..." autocomplete="off">
+      </div>
+      <div class="reglas-body">
+        <p id="reglas-status" class="carta-msg" hidden></p>
+        <div id="reglas-list"></div>
+        <p id="reglas-empty" class="carta-msg" hidden>No encontré nada con ese texto.</p>
+      </div>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
   <script src="js/carta.js"></script>
+  <script src="js/reglas.js"></script>
 </body>
 </html>

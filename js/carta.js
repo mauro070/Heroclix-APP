@@ -130,15 +130,21 @@ function cartaImg(src, alt, cls) {
   return `<img class="${cls}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" title="${escapeHtml(alt)}" loading="lazy" onerror="this.remove()">`;
 }
 
-function cartaDialHtml(unit, meta) {
-  const dial = Array.isArray(unit.dial) ? unit.dial : [];
-  if (!dial.length) return "";
-  const startClicks = new Set((unit.point_values || []).map(p => p.click_number));
+// Símbolo de combate de la miniatura para cada parte del dial: { speed: "wing", attack: "fist", ... }
+function cartaSymbolFor(unit, meta) {
   const symbolFor = {};
   (unit.combat_symbols || []).forEach(sym => {
     const info = meta.combat_symbols[sym];
     if (info && info.type && !symbolFor[info.type]) symbolFor[info.type] = sym;
   });
+  return symbolFor;
+}
+
+function cartaDialHtml(unit, meta) {
+  const dial = Array.isArray(unit.dial) ? unit.dial : [];
+  if (!dial.length) return "";
+  const startClicks = new Set((unit.point_values || []).map(p => p.click_number));
+  const symbolFor = cartaSymbolFor(unit, meta);
 
   let html = "";
   for (let from = 0; from < dial.length; from += CARTA_DIAL_COLS) {
@@ -172,12 +178,18 @@ function cartaDialHtml(unit, meta) {
 function cartaHtml(fig, result, meta) {
   const { unit, exact } = result;
   const pvs = unit.point_values || [];
+  const symbolFor = cartaSymbolFor(unit, meta);
   const powersList = (unit.special_powers || []).map(p => {
+    // Ícono de la parte del dial a la que pertenece el poder; los rasgos y poderes sin dial llevan una estrella.
+    const sym = DIAL_TYPES.includes(p.type) ? symbolFor[p.type] : null;
+    const icon = sym
+      ? cartaImg(`${HC_ASSETS}/cs/${sym}.svg`, DIAL_LABELS[p.type], "carta-sym carta-sym--big carta-sp__icon")
+      : `<span class="carta-sp__icon carta-sp__icon--star" title="${DIAL_TYPES.includes(p.type) ? DIAL_LABELS[p.type] : "No pertenece al dial"}"><i class="fas fa-star"></i></span>`;
     let label = SPECIAL_TYPE_LABELS[p.type] || (meta.special_power_types[p.type] || {}).name || cartaHumanize(p.type);
     if (p.type === "plus_plot_points") label = `+${p.plot_points || 0} plot`;
     else if (p.type === "minus_plot_points") label = `${p.plot_points} plot`;
     return `<li class="carta-sp">
-      <div class="carta-sp__head"><span class="carta-sp__name">${escapeHtml(p.name || "")}</span><span class="carta-sp__type">${escapeHtml(label)}</span></div>
+      <div class="carta-sp__head">${icon}<span class="carta-sp__name">${escapeHtml(p.name || "")}</span><span class="carta-sp__type">${escapeHtml(label)}</span></div>
       <p>${cartaText(p.description, meta)}</p></li>`;
   }).join("");
 

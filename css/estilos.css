@@ -901,9 +901,11 @@ body.carta-open { overflow: hidden; }
 .carta-ta p { padding: 0 12px 10px; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
 .carta-powers { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .carta-sp { padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
-.carta-sp__head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.carta-sp__name { font: 600 14px 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .3px; color: var(--blue-2); }
-.carta-sp__type { flex: none; font-size: 11px; font-weight: 700; color: var(--amber-d); }
+.carta-sp__head { display: flex; gap: 10px; align-items: center; }
+.carta-sp__icon { flex: none; }
+.carta-sp__icon--star { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: #dfe5ec; color: var(--navy); font-size: 13px; }
+.carta-sp__name { flex: 1; min-width: 0; font: 600 14px 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .3px; color: var(--blue-2); }
+.carta-sp__type { flex: none; max-width: 38%; text-align: right; font-size: 11px; font-weight: 700; color: var(--amber-d); }
 .carta-sp p { margin-top: 4px; font-size: 13.5px; line-height: 1.5; }
 .carta-die { display: inline-block; font-size: 1.25em; line-height: 1; vertical-align: -2px; }
 .carta-dialbox { margin-top: 16px; padding: 10px; border-radius: 12px; background: #d9dde2; }

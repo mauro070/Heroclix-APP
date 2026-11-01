@@ -5,7 +5,7 @@
    - Código (shell)   -> cache-first versionado (subí VERSION al cambiar código)
    ============================================================ */
 
-const VERSION = "v22";              // 👈 SUBÍ ESTO cuando cambies HTML/CSS/app.js
+const VERSION = "v23";              // 👈 SUBÍ ESTO cuando cambies HTML/CSS/app.js
 const SHELL_CACHE   = "shell-" + VERSION;
 const RUNTIME_CACHE = "runtime";    // datos + imágenes (persiste entre versiones)
 
@@ -17,6 +17,7 @@ const SHELL = [
   "js/app.js",
   "js/carta.js",
   "js/reglas.js",
+  "js/manual.js",
   "manifest.json",
   "icons/icon-192.png",
   "icons/icon-512.png",
@@ -31,6 +32,11 @@ function esDatos(url) {
 // ¿Es una imagen de figura?
 function esImagen(url) {
   return /\/Images\//i.test(url.pathname) || /\.(png|jpe?g|webp|gif|svg)$/i.test(url.pathname);
+}
+
+// pdf.js (visor del manual): se baja de cdnjs una vez y queda guardado para leer sin conexión
+function esPdfJs(url) {
+  return url.hostname === "cdnjs.cloudflare.com" && /\/pdf\.js\//i.test(url.pathname);
 }
 
 self.addEventListener("install", e => {
@@ -80,7 +86,7 @@ self.addEventListener("fetch", e => {
   }
 
   // 2) Imágenes: cache-first (las nuevas se descargan y quedan guardadas)
-  if (esImagen(url)) {
+  if (esImagen(url) || esPdfJs(url)) {
     e.respondWith((async () => {
       const hit = await caches.match(req);
       if (hit) return hit;

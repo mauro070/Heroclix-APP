@@ -206,6 +206,9 @@
         <h2 class="carta-name">Reglas</h2>
         <p class="carta-sub">Poderes, habilidades de equipo y símbolos</p>
       </header>
+      <button type="button" id="open-manual-btn" class="reglas-manual-btn">
+        <i class="fas fa-book-open"></i><span><b>Manual completo</b><small>Reglamento oficial de WizKids (PDF, en inglés)</small></span><i class="fas fa-chevron-right"></i>
+      </button>
       <div class="reglas-search">
         <i class="fas fa-search"></i>
         <input id="reglas-search" type="search" placeholder="Buscar poder o habilidad..." autocomplete="off">
@@ -218,9 +221,30 @@
     </div>
   </div>
 
+  <!-- ===== Manual de reglas (PDF) ===== -->
+  <div id="manual" class="carta-modal" hidden>
+    <div class="carta-modal__scrim" data-close-manual></div>
+    <div class="carta-modal__sheet manual-sheet" role="dialog" aria-modal="true" aria-label="Manual de reglas">
+      <header class="manual-bar">
+        <button type="button" class="manual-bar__btn" data-close-manual aria-label="Cerrar"><i class="fas fa-times"></i></button>
+        <div class="manual-bar__search"><i class="fas fa-search"></i><input id="manual-search" type="search" placeholder="Buscar en el manual..." autocomplete="off"></div>
+        <button type="button" id="manual-prev" class="manual-bar__btn" aria-label="Página anterior"><i class="fas fa-chevron-up"></i></button>
+        <input id="manual-page" class="manual-bar__page" type="number" min="1" value="1" inputmode="numeric" aria-label="Página">
+        <span id="manual-total" class="manual-bar__total">/ –</span>
+        <button type="button" id="manual-next" class="manual-bar__btn" aria-label="Página siguiente"><i class="fas fa-chevron-down"></i></button>
+      </header>
+      <div id="manual-results" class="manual-results" hidden></div>
+      <div id="manual-scroll" class="manual-scroll">
+        <p id="manual-status" class="carta-msg" hidden></p>
+        <div id="manual-pages"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
   <script src="js/carta.js"></script>
   <script src="js/reglas.js"></script>
+  <script src="js/manual.js"></script>
 </body>
 </html>

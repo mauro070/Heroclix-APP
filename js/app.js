@@ -165,7 +165,10 @@ function notifyDraftChanged() {
   }, 1500);
 }
 
+// Si el usuario tocó el equipo en esta sesión (por ej. lo vació), el servidor ya no puede devolverle su copia vieja.
+let draftTouched = false;
 function saveCurrent() {
+  draftTouched = true;
   try { localStorage.setItem(KEY_CURRENT, JSON.stringify(currentKeys())); } catch (e) {}
   notifyDraftChanged();
 }
@@ -285,8 +288,9 @@ async function syncWithHomelab(isManual = false) {
       applyKeys(JSON.parse(localStorage.getItem(KEY_CURRENT) || "[]"));
     }
 
-    // Si el equipo actual en pantalla está vacío y el servidor tiene uno guardado, recuperarlo
-    if ((!currentKeys().length) && Array.isArray(remoteData.current) && remoteData.current.length) {
+    // Si el equipo actual en pantalla está vacío y el servidor tiene uno guardado, recuperarlo (solo al abrir la app:
+    // si el usuario acaba de vaciarlo, la sincronización tiene que subir el equipo vacío, no traer el viejo)
+    if (!draftTouched && (!currentKeys().length) && Array.isArray(remoteData.current) && remoteData.current.length) {
       applyKeys(remoteData.current);
       try { localStorage.setItem(KEY_CURRENT, JSON.stringify(remoteData.current)); } catch (e) {}
     }

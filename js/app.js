@@ -112,6 +112,7 @@ function renderFigures() {
     const collectorBadge = collectorNumber
       ? `<span class="unit__collector" title="Collector number">${escapeHtml(collectorNumber)}</span>`
       : "";
+    const cardBtn = `<button type="button" class="unit__card" data-card aria-label="Ver carta" title="Ver carta"><i class="fas fa-id-card"></i></button>`;
     return `
       <li class="unit ${fig.isCustom ? "unit--custom" : ""}" data-fig="${idx}" data-name="${escapeHtml(`${fig.name} ${collectorNumber}`.toLowerCase())}"
           data-keywords="${escapeHtml(fig.keywords.join("|").toLowerCase())}">
@@ -119,7 +120,7 @@ function renderFigures() {
           <img class="unit__img" src="${escapeHtml(fig.img)}" alt="${escapeHtml(fig.alt || `${fig.name} ${collectorNumber}`)}" loading="lazy" data-zoom>
         </div>
         <div class="unit__body">
-          <h3 class="unit__name"><span>${escapeHtml(fig.name)}</span>${collectorBadge}</h3>
+          <h3 class="unit__name"><span>${escapeHtml(fig.name)}</span>${collectorBadge}${cardBtn}</h3>
           <div class="unit__tags">${tags}</div>
         </div>
         <div class="unit__dials">${dials}</div>
@@ -698,6 +699,12 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       return;
     }
+    const cardButton = e.target.closest("[data-card]");
+    if (cardButton) {
+      e.preventDefault();
+      openCarta(ALL_FIGURES[Number(cardButton.closest(".unit").dataset.fig)]);
+      return;
+    }
     const tag = e.target.closest(".tag");
     if (tag) {
       e.preventDefault();
@@ -723,7 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   listEl.addEventListener("pointerdown", e => {
     if (e.button !== undefined && e.button !== 0) return;
-    if (e.target.closest(".dial, .tag")) return;
+    if (e.target.closest(".dial, .tag, .unit__card")) return;
     const unit = e.target.closest(".unit");
     if (!unit) return;
     holdUnit = unit;
@@ -746,7 +753,7 @@ document.addEventListener("DOMContentLoaded", () => {
   listEl.addEventListener("pointerleave", cancelHold);
   listEl.addEventListener("contextmenu", e => {
     const unit = e.target.closest(".unit");
-    if (!unit || e.target.closest(".dial, .tag")) return;
+    if (!unit || e.target.closest(".dial, .tag, .unit__card")) return;
     e.preventDefault();
     cancelHold();
     openFigureActions(ALL_FIGURES[Number(unit.dataset.fig)]);

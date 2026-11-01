@@ -8,6 +8,7 @@ const KEY_CUSTOM  = "heroclix-custom-figures"; // miniaturas agregadas por el us
 const KEY_OVERRIDES = "heroclix-figure-overrides"; // cambios sobre el catálogo incluido
 const KEY_HIDDEN = "heroclix-hidden-figures"; // miniaturas del catálogo borradas
 const KEY_DELETED_CUSTOM = "heroclix-deleted-custom-ids"; // tombstones para que Sync no las restaure
+const KEY_DELETED_TEAMS = "heroclix-deleted-team-ids"; // idem para equipos guardados borrados
 
 /* ============================ Refs ============================ */
 const listEl     = document.getElementById("heroclix-list");
@@ -56,6 +57,14 @@ function getDeletedCustomIds() {
 }
 function setDeletedCustomIds(value) {
   try { localStorage.setItem(KEY_DELETED_CUSTOM, JSON.stringify(value)); } catch (e) {}
+}
+
+function getDeletedTeamIds() {
+  try { return JSON.parse(localStorage.getItem(KEY_DELETED_TEAMS) || "[]"); }
+  catch (e) { return []; }
+}
+function setDeletedTeamIds(value) {
+  try { localStorage.setItem(KEY_DELETED_TEAMS, JSON.stringify(value)); } catch (e) {}
 }
 
 function getDefaultMiniSvg(name) {
@@ -188,6 +197,7 @@ function loadCurrent() {
 /* ============================ Homelab Sync ============================ */
 const HOMELAB_API_BASE = "https://mauro.taild9dcef.ts.net:8444";
 let isSyncing = false;
+let syncAgain = false; // se pidió otra sincronización mientras había una en curso
 
 async function checkHomelabStatus() {
   const dot = $("sync-dot");
@@ -211,22 +221,32 @@ async function checkHomelabStatus() {
 }
 
 async function syncWithHomelab(isManual = false) {
-  if (isSyncing) return;
+  if (isSyncing) { syncAgain = true; return; }
   isSyncing = true;
   const btn = $("sync-btn");
   if (btn) btn.classList.add("is-loading");
 
   try {
-    const localTeams = getSaved();
     const res = await fetch(`${HOMELAB_API_BASE}/api/heroclix`, { mode: "cors", signal: AbortSignal.timeout(6000) });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const remoteData = await res.json();
     const remoteTeams = Array.isArray(remoteData.teams) ? remoteData.teams : [];
 
+    // Los equipos locales se leen recién ahora: si el usuario guardó o borró uno mientras esperábamos al servidor,
+    // no hay que pisar ese cambio con una copia vieja.
+    const localTeams = getSaved();
+    const deletedTeamIds = Array.from(new Set([
+      ...getDeletedTeamIds(),
+      ...(Array.isArray(remoteData.deleted_team_ids) ? remoteData.deleted_team_ids : [])
+    ]));
+    const deletedTeamSet = new Set(deletedTeamIds);
+    setDeletedTeamIds(deletedTeamIds);
+
     // Combinar por ID o nombre respetando fecha más reciente
     const map = new Map();
-    remoteTeams.forEach(t => map.set(t.id || t.name, t));
+    remoteTeams.filter(t => !deletedTeamSet.has(t.id)).forEach(t => map.set(t.id || t.name, t));
     localTeams.forEach(t => {
+      if (deletedTeamSet.has(t.id)) return;
       const key = t.id || t.name;
       const remote = map.get(key);
       if (!remote || (t.date && t.date >= (remote.date || 0))) {
@@ -302,6 +322,7 @@ async function syncWithHomelab(isManual = false) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         teams: merged,
+        deleted_team_ids: deletedTeamIds,
         current: currentKeys(),
         custom_figures: mergedCustom,
         figure_overrides: mergedOverrides,
@@ -323,6 +344,7 @@ async function syncWithHomelab(isManual = false) {
   } finally {
     isSyncing = false;
     if (btn) btn.classList.remove("is-loading");
+    if (syncAgain) { syncAgain = false; syncWithHomelab(false); }
   }
 }
 
@@ -364,6 +386,7 @@ function loadNamedTeam(id) {
   toast(`Cargado: ${t.name}`);
 }
 function deleteNamedTeam(id) {
+  setDeletedTeamIds(Array.from(new Set([...getDeletedTeamIds(), id])));
   setSaved(getSaved().filter(x => x.id !== id));
 }
 function renderSaved() {

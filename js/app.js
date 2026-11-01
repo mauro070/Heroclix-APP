@@ -182,10 +182,15 @@ function saveCurrent() {
   notifyDraftChanged();
 }
 function applyKeys(keys) {
-  const set = new Set(keys);
+  // Las copias de una misma miniatura comparten clave: se marcan tantas como veces aparece en el equipo, no todas.
+  const pending = new Map();
+  keys.forEach(k => pending.set(k, (pending.get(k) || 0) + 1));
   listEl.querySelectorAll(".caja").forEach(cb => {
     const fig = ALL_FIGURES[cb.dataset.fig];
-    cb.checked = fig ? set.has(figKey(fig, cb.value)) : false;
+    const key = fig ? figKey(fig, cb.value) : null;
+    const left = key ? pending.get(key) || 0 : 0;
+    cb.checked = left > 0;
+    if (left > 0) pending.set(key, left - 1);
   });
   recalc();
 }
